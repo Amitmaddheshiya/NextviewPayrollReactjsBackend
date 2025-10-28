@@ -9,38 +9,41 @@ const attendanceService = require('../services/attendance-service');
 
 class UserController {
 
-    createUser = async (req,res,next) =>
-    {
-        const file = req.file;
-        let {name,email,password,type, address, mobile} = req.body;
-        const username = 'user'+crypto.randomInt(11111111,999999999);
-        if(!name || !email || !username || !password || !type || !address || !file || !mobile) return next(ErrorHandler.badRequest('All Fields Required'));
-        type = type.toLowerCase();
-        if(type==='admin')
-        {
-            const adminPassword = req.body.adminPassword;
-            if(!adminPassword)
-                return next(ErrorHandler.badRequest(`Please Enter Your Password to Add ${name} as an Admin`));
-            const {_id} = req.user;
-            const {password:hashPassword} = await userService.findUser({_id});
-            const isPasswordValid = await userService.verifyPassword(adminPassword,hashPassword);
-            if(!isPasswordValid) return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
-        }
-        const user = {
-            name,email,username,mobile,password,type,address,image:file.filename
-        }
+ createUser = async (req, res, next) => {
+  try {
+    const file = req.file;
+    const {
+      name, email, mobile, password, type, address,
+      designation, date, panNumber, aadhaarNumber,
+      bankName, accountNumber, ifscCode
+    } = req.body;
 
-        
-        // console.log("Hello! I am here in create user");
-        // console.log(user)
-        
-        const userResp = await userService.createUser(user);
-       
-        
+    const userObj = {
+      name,
+      email,
+      mobile,
+      password,
+      type,
+      address,
+      designation,
+      date,
+      panNumber,
+      aadhaarNumber,
+      bankName,
+      accountNumber,
+      ifscCode,
+      image: file ? file.filename : 'user.png',  // ✅ fixed
+    };
 
-        if(!userResp) return next(ErrorHandler.serverError('Failed To Create An Account'));
-        res.json({success:true,message:'User has been Added',user:new UserDto(user)});
-    }
+    const user = await userService.createUser(userObj);
+    return res.status(200).json({ success: true, message: 'User added successfully', user });
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+};
+
+
 
     updateUser = async (req,res,next) =>
     {
@@ -193,34 +196,47 @@ class UserController {
         }
     }
 
-    applyLeaveApplication = async (req, res, next) => {
-        try {
-            const data = req.body;
-            const { applicantID, title, type, startDate, endDate, appliedDate, period, reason } = data;
-            const newLeaveApplication = {
-                applicantID,
-                title,
-                type,
-                startDate,
-                endDate,
-                appliedDate, 
-                period, 
-                reason, 
-                adminResponse:"Pending"
-            };
+  applyLeaveApplication = async (req, res, next) => {
+    try {
+        const data = req.body;
+        const { applicantID, title, type, startDate, endDate, appliedDate, period, reason } = data;
 
-            const isLeaveApplied = await userService.findLeaveApplication({applicantID,startDate,endDate,appliedDate});
-            if(isLeaveApplied) return next(ErrorHandler.notAllowed('Leave Already Applied'));
+        // 👇 Get applicant details from DB
+        const applicant = await userService.findUser({ _id: applicantID });
+        if (!applicant) return next(ErrorHandler.notFound('Applicant not found'));
 
-            const resp = await userService.createLeaveApplication(newLeaveApplication);
-            if(!resp) return next(ErrorHandler.serverError('Failed to apply leave'));
+        const newLeaveApplication = {
+            applicantID,
+            applicantName: applicant.name,     // 👈 store name
+            applicantEmail: applicant.email,   // 👈 store email
+            title,
+            type,
+            startDate,
+            endDate,
+            appliedDate,
+            period,
+            reason,
+            adminResponse: "Pending"
+        };
 
-            res.json({success:true,data:resp});
+        const isLeaveApplied = await userService.findLeaveApplication({
+            applicantID,
+            startDate,
+            endDate,
+            appliedDate
+        });
+        if (isLeaveApplied) return next(ErrorHandler.notAllowed('Leave Already Applied'));
 
-        } catch (error) {
-            res.json({success:false,error});   
-        }
+        const resp = await userService.createLeaveApplication(newLeaveApplication);
+        if (!resp) return next(ErrorHandler.serverError('Failed to apply leave'));
+
+        res.json({ success: true, data: resp });
+
+    } catch (error) {
+        res.json({ success: false, error });
     }
+};
+
 
     viewLeaveApplications = async (req, res, next) => {
         try {
@@ -296,6 +312,16 @@ class UserController {
             res.json({success:false,error});
         }
     }
+    getAllUsers = async (req, res, next) => {
+        try {
+            const users = await userService.findUsers({});
+            if(!users || users.length<1) return next(ErrorHandler.notFound('No Users Found'));
+            res.json({success:true,data:users});
+        } catch (error) {
+            res.json({success:false,error});
+        }
+    }
+
 }
 
 module.exports = new UserController();

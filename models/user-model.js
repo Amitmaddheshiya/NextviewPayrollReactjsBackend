@@ -4,115 +4,123 @@ const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
-    name:{
-        type:String,
-        required:true,
-        minlength:4,
-        maxlength:25,
-        trim:true
+    name: {
+        type: String,
+        required: true,
+        minlength: 2,
+        maxlength: 50,
+        trim: true
     },
-    email:{
-        type:String,
-        required:[true,'Enter Email Address'],
-        unique:[true,'Email Already Exist'],
-        trim:true,
-        validate:{
-            validator:validator.isEmail,
-            message:'{VALUE} is not a valid email'
+    email: {
+        type: String,
+        required: [true, 'Enter Email Address'],
+        unique: [true, 'Email Already Exists'],
+        trim: true,
+        validate: {
+            validator: validator.isEmail,
+            message: '{VALUE} is not a valid email'
         }
     },
-    username:{
-        type:String,
-        required:true,
-        unique:true,
-        minlength:4,
-        maxlength:15,
-        trim:true
+    mobile: {
+        type: String,
+        required: true,
+        minlength: 10,
+        maxlength: 13,
+        trim: true
     },
-    mobile:{
-        type:Number,
-        required:true,
-        minlength:10,
-        maxlength:13,
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
     },
-    password:{
-        type:String,
-        required:true,
-        minlength:8,
+    type: {
+        type: String,
+        enum: ['admin', 'employee', 'leader'],
+        default: 'employee',
+        set: v => String(v).toLowerCase() // normalize
     },
-    type:{
-        type:String,
-        enum:['admin','employee','leader']
+    status: {
+        type: String,
+        enum: ['active', 'banned'],
+        default: 'active'
     },
-    status:{
-        type:String,
-        enum:['active','banned'],
-        default:'active'
+    team: {
+        type: Schema.Types.ObjectId,
+        ref: 'Team'
     },
-    team:{
-        type:Schema.Types.ObjectId,
-        ref:'Team'
+    image: {
+        type: String,
+        default: 'user.png'
     },
-    image:{
-        type:String,
-        required:false,
-        default:'user.png'
+    address: {
+        type: String,
+        trim: true,
+        default: 'No Address Specified',
+        maxlength: 100
     },
-    address:{
-        type:String,
-        default:'No Address Specified',
-        maxlength:100,
-        trim:true
-    }
-},{
-    timestamps:true
-});
 
-// const SALT_FACTOR = process.env.BCRYPT_PASSWORD_SALT_FACTOR || 10;
-const SALT_FACTOR = 10
+    // 🆕 Additional Info
+    designation: {
+        type: String,
+        trim: true,
+        default: 'Employee'
+    },
+    date: {
+        type: String,
+        default: () => new Date().toISOString().split('T')[0] // yyyy-mm-dd
+    },
+    panNumber: { type: String, trim: true, default: '' },
+    aadhaarNumber: { type: String, trim: true, default: '' },
+    bankName: { type: String, trim: true, default: '' },
+    accountNumber: { type: String, trim: true, default: '' },
+    ifscCode: { type: String, trim: true, default: '' },
+}, { timestamps: true });
 
+// ===============================
+// PASSWORD ENCRYPTION MIDDLEWARE
+// ===============================
+const SALT_FACTOR = 10;
 
-// userSchema.path('password').validate(
-//     console.log('calling')
-// )
-
-
-userSchema.pre('save',function(done){
+// Encrypt password before save
+userSchema.pre('save', function (done) {
     const user = this;
-    if(!user.isModified('password'))
-        return done();
-
-    bcrypt.genSalt(SALT_FACTOR,(err,salt)=>{
-        if(err){
-            console.log(err);
-            return done(err);
-        }
-        bcrypt.hash(user.password,salt,(err,hashedPassword)=>
-        {
-            if(err)
-                return done(err);
-            user.password = hashedPassword;
-            return done();
+    if (!user.isModified('password')) return done();
+    bcrypt.genSalt(SALT_FACTOR, (err, salt) => {
+        if (err) return done(err);
+        bcrypt.hash(user.password, salt, (err, hashed) => {
+            if (err) return done(err);
+            user.password = hashed;
+            done();
         });
     });
 });
 
-
-userSchema.pre('updateOne',function(done){
-    const user = this.getUpdate();
-    if(!user.password)
-        return done();
-    bcrypt.genSalt(SALT_FACTOR,(err,salt)=>
-    {
-        if(err)
-            return done(err);
-        bcrypt.hash(user.password,salt,(err,hashedPassword)=>
-        {
-            if(err) return done(err);
-            user.password = hashedPassword;
-            return done();
-        });
-    });
+// Encrypt on updateOne
+userSchema.pre('updateOne', async function (next) {
+    const update = this.getUpdate();
+    if (!update || !update.password) return next();
+    try {
+        const salt = await bcrypt.genSalt(SALT_FACTOR);
+        const hashed = await bcrypt.hash(update.password, salt);
+        if (!update.$set) update.$set = {};
+        update.$set.password = hashed;
+        delete update.password;
+        next();
+    } catch (err) { next(err); }
 });
 
-module.exports = new mongoose.model('User',userSchema,'users');
+// Encrypt on findOneAndUpdate
+userSchema.pre('findOneAndUpdate', async function (next) {
+    const update = this.getUpdate();
+    if (!update || !update.password) return next();
+    try {
+        const salt = await bcrypt.genSalt(SALT_FACTOR);
+        const hashed = await bcrypt.hash(update.password, salt);
+        if (!update.$set) update.$set = {};
+        update.$set.password = hashed;
+        delete update.password;
+        next();
+    } catch (err) { next(err); }
+});
+
+module.exports = mongoose.model('User', userSchema, 'users');

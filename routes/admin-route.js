@@ -4,6 +4,11 @@ const teamController = require('../controllers/team-controller');
 const upload = require('../services/file-upload-service');
 const asyncMiddleware = require('../middlewares/async-middleware');
 
+// existing imports at top
+router.post('/view-employee-attendance',asyncMiddleware(userController.viewEmployeeAttendance));
+router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveApplications));
+router.post('/update-leave/:id', asyncMiddleware(userController.updateLeaveApplication)); // <-- ADD THIS
+router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmployeeSalary));
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
 router.patch('/user/:id',upload.single('profile'),asyncMiddleware(userController.updateUser));      // Update User
 router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees
@@ -24,13 +29,14 @@ router.patch('/team/member/add',asyncMiddleware(teamController.addMember));     
 router.patch('/team/member/remove',asyncMiddleware(teamController.removeMember));                   // Remove Team Member
 router.patch('/team/leader/add',asyncMiddleware(teamController.addRemoveLeader));                   // Add Team Leader
 router.patch('/team/leader/remove',asyncMiddleware(teamController.addRemoveLeader));                // Remove Team Leader
-router.get('/counts',asyncMiddleware(teamController.getCounts));                                    // Counts
-router.post('/view-employee-attendance',asyncMiddleware(userController.viewEmployeeAttendance));
-router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveApplications));
-router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmployeeSalary));
+router.get('/counts',asyncMiddleware(teamController.getCounts));  
+router.get('/all-users',asyncMiddleware(userController.getAllUsers));
 router.post('/update-employee-salary/',asyncMiddleware(userController.updateEmployeeSalary));
 router.post('/view-all-salary',asyncMiddleware(userController.viewSalary));
-router.post('/update-leave/:id',asyncMiddleware(userController.updateLeaveApplication));
+router.post('/generate-monthly-salaries',asyncMiddleware(userController.generateMonthlySalaries));
+router.get('/user-salaries', asyncMiddleware(userController.viewUserSalaries));
+
+
 
 
 module.exports = router;

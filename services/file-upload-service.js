@@ -1,50 +1,64 @@
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
+// Ensure directory exists
+const ensureDir = (dir) => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+
+// Storage configuration
 const storageEngine = multer.diskStorage({
-    destination:(req,file,cb) =>
-    {
-        console.log('Multer Storage Engine');
-        if(file.fieldname==='profile')
-            cb(null,'./storage/images/profile/')
-        else if(file.fieldname==='image')
-            cb(null,'./storage/images/teams');
-        else
-            cb(null,false);
+    destination: (req, file, cb) => {
+        let uploadPath;
+
+        switch (file.fieldname) {
+            case 'profile':
+                uploadPath = './storage/images/profile/';
+                break;
+            case 'image':
+                uploadPath = './storage/images/teams/';
+                break;
+            case 'video':
+                uploadPath = './storage/videos/';
+                break;
+            default:
+                uploadPath = null;
+        }
+
+        if (!uploadPath) return cb(new Error('Invalid field name'), false);
+
+        ensureDir(uploadPath);
+        cb(null, uploadPath);
     },
-    filename:(req,file,cb)=>
-    {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + "-" + uniqueSuffix + file.originalname);
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
     }
-})
+});
 
+// File filter
+const fileFilter = (req, file, cb) => {
+    if (!file) return cb(null, false);
 
-const fileFilter = (req,file,cb) =>{
-    console.log('File Filter Method Called');
-    console.log('Logging File '+file);
-    if(file === 'undefined')
-    {
-        console.log('undefined hai')
-        cb(null,false);
+    const imageTypes = ['image/png', 'image/jpg', 'image/jpeg'];
+    const videoTypes = ['video/mp4'];
+
+    if (file.fieldname === 'profile' || file.fieldname === 'image') {
+        return cb(null, imageTypes.includes(file.mimetype));
+    } else if (file.fieldname === 'video') {
+        return cb(null, videoTypes.includes(file.mimetype));
+    } else {
+        return cb(null, false);
     }
-    else if(file.fieldname==='image')
-    {
-        if(file.mimetype === 'image/png' || file.mimetype === 'image/jpg' ||file.mimetype === 'image/jpeg')
-            cb(null,true)
-        else
-            cb(null,false)
-    }
-    else if(file.fieldname==='video')
-    {
-        if(file.mimetype==='video/mp4')
-            cb(null,true)
-        else
-            cb(null,false)
-    }
-    else
-        cb(null,false);
-}
+};
 
+// Multer upload
+const upload = multer({
+    storage: storageEngine,
+    fileFilter: fileFilter,
+    limits: { fileSize: 50 * 1024 * 1024 } // 50 MB max
+});
 
-const upload = multer({storage:storageEngine});
 module.exports = upload;
