@@ -39,7 +39,11 @@ app.use('/api/employee',auth,authRole(['employee','leader']),employeeRoute);
 app.use('/api/leader',auth,authRole(['leader']),leaderRoute);
 
 
-app.use('/storage',express.static('storage'))
+const path = require('path');
+
+// ✅ Serve uploaded images statically
+app.use('/storage', express.static(path.join(__dirname, 'storage')));
+
 
 //Middlewares;
 app.use((req,res,next)=>

@@ -10,7 +10,7 @@ router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveA
 router.post('/update-leave/:id', asyncMiddleware(userController.updateLeaveApplication)); // <-- ADD THIS
 router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmployeeSalary));
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
-router.patch('/user/:id',upload.single('profile'),asyncMiddleware(userController.updateUser));      // Update User
+router.patch('/user/:id', upload.single('image'), asyncMiddleware(userController.updateUser));   // Update User
 router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees
 router.get('/employees/free',asyncMiddleware(userController.getFreeEmployees));                     // Free Employees
 router.get('/employee/:id',asyncMiddleware(userController.getUser));                                // Employee
@@ -35,7 +35,7 @@ router.post('/update-employee-salary/',asyncMiddleware(userController.updateEmpl
 router.post('/view-all-salary',asyncMiddleware(userController.viewSalary));
 router.post('/generate-monthly-salaries',asyncMiddleware(userController.generateMonthlySalaries));
 router.get('/user-salaries', asyncMiddleware(userController.viewUserSalaries));
-
+router.delete('/user/:id', asyncMiddleware(userController.deleteUser)); // ✅ keep after other user routes
 
 
 

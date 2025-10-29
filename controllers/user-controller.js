@@ -1,3 +1,4 @@
+const User = require("../models/user-model");
 const ErrorHandler = require('../utils/error-handler');
 const userService = require('../services/user-service');
 const UserDto = require('../dtos/user-dto');
@@ -9,17 +10,11 @@ const attendanceService = require('../services/attendance-service');
 
 class UserController {
 
- createUser = async (req, res, next) => {
+ createUser = async (req, res) => {
   try {
-    const file = req.file;
     const {
-      name, email, mobile, password, type, address,
-      designation, date, panNumber, aadhaarNumber,
-      bankName, accountNumber, ifscCode
-    } = req.body;
-
-    const userObj = {
       name,
+      username,
       email,
       mobile,
       password,
@@ -32,71 +27,116 @@ class UserController {
       bankName,
       accountNumber,
       ifscCode,
-      image: file ? file.filename : 'user.png',  // ✅ fixed
+    } = req.body;
+
+    // ✅ Ensure username is always a string
+    const finalUsername =
+      typeof username === "string"
+        ? username
+        : Array.isArray(username)
+        ? username[0]
+        : "";
+
+    if (!finalUsername) {
+      return res.status(400).json({ success: false, message: "Enter Username" });
+    }
+
+    const userObj = {
+      name,
+      username: finalUsername, // ✅ guaranteed string
+      email,
+      mobile,
+      password,
+      type,
+      address,
+      designation,
+      date,
+      panNumber,
+      aadhaarNumber,
+      bankName,
+      accountNumber,
+      ifscCode,
+      image: req.file ? req.file.filename : "user.png",
     };
 
-    const user = await userService.createUser(userObj);
-    return res.status(200).json({ success: true, message: 'User added successfully', user });
+    const user = new User(userObj);
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User Created Successfully",
+      data: user,
+    });
   } catch (err) {
     console.error(err);
-    next(err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Something went wrong",
+    });
   }
 };
 
 
+    updateUser = async (req, res, next) => {
+  try {
+    const file = req.file; // ✅ If new image uploaded
+    const { id } = req.params;
+    const {
+      name,
+      email,
+      mobile,
+      password,
+      type,
+      status,
+      address,
+      designation,
+      date,
+      panNumber,
+      aadhaarNumber,
+      bankName,
+      accountNumber,
+      ifscCode,
+    } = req.body;
 
-    updateUser = async (req,res,next) =>
-    {
-        const file = req.file;
-        const filename = file && file.filename;
-        let user,id;
-        console.log(req.user.type);
-        if(req.user.type==='admin')
-        {
-            const {id} = req.params;
-            let {name,username,email,password,type,status, address, mobile} = req.body;
-            type = type && type.toLowerCase();
-            if(!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid User Id'));
-            if(type)
-            {
-                const dbUser = await userService.findUser({_id:id});
-                if(!dbUser) return next(ErrorHandler.badRequest('No User Found'));
-                if(dbUser.type!=type)
-                { 
-                    const {_id} = req.user;
-                    if(_id===id) return next(ErrorHandler.badRequest(`You Can't Change Your Own Position`));
-                    const {adminPassword} = req.body;
-                    if(!adminPassword)
-                        return next(ErrorHandler.badRequest(`Please Enter Your Password To Change The Type`));
-                    const {password:hashPassword} = await userService.findUser({_id});
-                    const isPasswordValid = await userService.verifyPassword(adminPassword,hashPassword);
-                    if(!isPasswordValid) return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
-    
-                    if((dbUser.type==='employee') && (type==='admin' || type==='leader'))
-                        if(dbUser.team!=null) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is in a team.`));
-    
-                    if((dbUser.type==='leader') && (type==='admin' || type==='employee'))
-                        if(await teamService.findTeam({leader:id})) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is leading a team.`));
-                }
-            }
-            user = {
-                name,email,status,username,mobile,password,type,address,image:filename
-            }
-        }
-        else
-        {
-            id =  req.user._id;
-            let {name,username,address,mobile} = req.body;
-            user = {
-                name,username,mobile,address,image:filename
-            }
-        }
-        // console.log(user);
-        const userResp = await userService.updateUser(id,user);
-        // console.log(userResp);
-        if(!userResp) return next(ErrorHandler.serverError('Failed To Update Account'));
-        res.json({success:true,message:'Account Updated'});
-    }
+    // ✅ Validate user ID
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return next(ErrorHandler.badRequest("Invalid User Id"));
+
+    // ✅ Find existing user
+    const dbUser = await userService.findUser({ _id: id });
+    if (!dbUser) return next(ErrorHandler.notFound("User not found"));
+
+    // ✅ Prepare updated user data
+    const userData = {
+      name: name || dbUser.name,
+      email: email || dbUser.email,
+      mobile: mobile || dbUser.mobile,
+      password: password || dbUser.password,
+      type: type || dbUser.type,
+      status: status || dbUser.status,
+      address: address || dbUser.address,
+      designation: designation || dbUser.designation,
+      date: date || dbUser.date,
+      panNumber: panNumber || dbUser.panNumber,
+      aadhaarNumber: aadhaarNumber || dbUser.aadhaarNumber,
+      bankName: bankName || dbUser.bankName,
+      accountNumber: accountNumber || dbUser.accountNumber,
+      ifscCode: ifscCode || dbUser.ifscCode,
+      image: file ? file.filename : dbUser.image, // ✅ update if new image, else keep old
+    };
+
+    // ✅ Update user in DB
+    const updatedUser = await userService.updateUser(id, userData);
+    if (!updatedUser)
+      return next(ErrorHandler.serverError("Failed To Update Account"));
+
+    res.json({ success: true, message: "User Updated Successfully", data: updatedUser });
+  } catch (error) {
+    console.error("Update User Error:", error);
+    res.json({ success: false, error });
+  }
+};
+
 
     getUsers = async (req,res,next) =>
     {
@@ -115,6 +155,29 @@ class UserController {
         const employees = emps.map((o)=> new UserDto(o));
         res.json({success:true,message:'Free Employees List Found',data:employees})
     }
+
+    deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    console.log("Deleting user:", id);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid ID");
+      return next(ErrorHandler.badRequest('Invalid User ID'));
+    }
+
+    const deletedUser = await userService.deleteUser({ _id: id });
+    console.log("Deleted user result:", deletedUser);
+
+    if (!deletedUser)
+      return next(ErrorHandler.notFound('User not found or already deleted'));
+
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.json({ success: false, error });
+  }
+};
 
 
     getUser = async (req,res,next) =>
