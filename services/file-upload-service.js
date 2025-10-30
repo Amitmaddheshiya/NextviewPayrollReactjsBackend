@@ -10,27 +10,23 @@ const ensureDir = (dir) => {
 // Storage configuration
 const storageEngine = multer.diskStorage({
     destination: (req, file, cb) => {
-        let uploadPath;
+    let uploadPath;
 
-        switch (file.fieldname) {
-            case 'profile':
-                uploadPath = './storage/images/profile/';
-                break;
-            case 'image':
-                uploadPath = './storage/images/teams/';
-                break;
-            case 'video':
-                uploadPath = './storage/videos/';
-                break;
-            default:
-                uploadPath = null;
-        }
+    // Route based destination logic
+    if (req.originalUrl.includes('/team')) {
+        uploadPath = './storage/images/teams/';
+    } else if (req.originalUrl.includes('/user')) {
+        uploadPath = './storage/images/profile/';
+    } else if (req.originalUrl.includes('/video')) {
+        uploadPath = './storage/videos/';
+    } else {
+        uploadPath = './storage/images/others/';
+    }
 
-        if (!uploadPath) return cb(new Error('Invalid field name'), false);
+    ensureDir(uploadPath);
+    cb(null, uploadPath);
+},
 
-        ensureDir(uploadPath);
-        cb(null, uploadPath);
-    },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname);

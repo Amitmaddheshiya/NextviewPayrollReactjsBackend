@@ -56,7 +56,7 @@ class UserController {
       bankName,
       accountNumber,
       ifscCode,
-      image: req.file ? req.file.filename : "user.png",
+      profile: req.file ? req.file.filename : "user.png",
     };
 
     const user = new User(userObj);
@@ -122,7 +122,7 @@ class UserController {
       bankName: bankName || dbUser.bankName,
       accountNumber: accountNumber || dbUser.accountNumber,
       ifscCode: ifscCode || dbUser.ifscCode,
-      image: file ? file.filename : dbUser.image, // ✅ update if new image, else keep old
+      profile: file ? file.filename : dbUser.profile, // ✅ update if new image, else keep old
     };
 
     // ✅ Update user in DB

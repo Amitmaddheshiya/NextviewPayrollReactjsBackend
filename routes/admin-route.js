@@ -10,7 +10,7 @@ router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveA
 router.post('/update-leave/:id', asyncMiddleware(userController.updateLeaveApplication)); // <-- ADD THIS
 router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmployeeSalary));
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
-router.patch('/user/:id', upload.single('image'), asyncMiddleware(userController.updateUser));   // Update User
+router.patch('/user/:id', upload.single('profile'), asyncMiddleware(userController.updateUser));   // Update User
 router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees
 router.get('/employees/free',asyncMiddleware(userController.getFreeEmployees));                     // Free Employees
 router.get('/employee/:id',asyncMiddleware(userController.getUser));                                // Employee
@@ -20,8 +20,8 @@ router.get('/admin/:id',asyncMiddleware(userController.getUser));               
 router.get('/leaders/free',asyncMiddleware(userController.getFreeLeaders));                         // Free Leaders
 router.get('/leaders',asyncMiddleware(userController.getLeaders));                                  // Leaders
 router.get('/leader/:id',asyncMiddleware(userController.getUser));                                  // Leader
-router.post('/team',upload.single('image'),asyncMiddleware(teamController.createTeam));             // Create Team
-router.patch('/team/:id',upload.single('image'),asyncMiddleware(teamController.updateTeam));        // Update Team
+router.post('/team',upload.single('profile'),asyncMiddleware(teamController.createTeam));             // Create Team
+router.patch('/team/:id',upload.single('profile'),asyncMiddleware(teamController.updateTeam));        // Update Team
 router.get('/teams',asyncMiddleware(teamController.getTeams));                                      // Teams
 router.get('/team/:id',asyncMiddleware(teamController.getTeam));                                    // Team
 router.get('/team/:id/members',asyncMiddleware(teamController.getTeamMembers));                     // Team Members
@@ -36,6 +36,8 @@ router.post('/view-all-salary',asyncMiddleware(userController.viewSalary));
 router.post('/generate-monthly-salaries',asyncMiddleware(userController.generateMonthlySalaries));
 router.get('/user-salaries', asyncMiddleware(userController.viewUserSalaries));
 router.delete('/user/:id', asyncMiddleware(userController.deleteUser)); // ✅ keep after other user routes
+router.delete('/team/:id', asyncMiddleware(teamController.deleteTeam)); // ✅ keep after other team routes
+router.patch('/update-team/:id', asyncMiddleware(teamController.updateTeamData)); // <-- ADD THIS
 
 
 

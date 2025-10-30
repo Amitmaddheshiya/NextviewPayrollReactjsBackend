@@ -54,7 +54,7 @@ const userSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Team'
     },
-    image: {
+    profile: {
         type: String,
         default: 'user.png'
     },

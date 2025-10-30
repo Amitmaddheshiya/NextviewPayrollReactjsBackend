@@ -9,13 +9,13 @@ class TeamController {
 
     createTeam = async (req,res,next) =>
     {
-        const image = req.file && req.file.filename;
+        const profile = req.file && req.file.filename;
         const {name,description} =req.body;
         if(!name) return next(ErrorHandler.badRequest('Required Parameter Teams Name Is Empty'))
         const team = {
             name,
             description,
-            image
+            profile
         }
         const teamResp = await teamService.createTeam(team);
         if(!teamResp) return next(ErrorHandler.serverError('Failed To Create The Team'));
@@ -28,19 +28,39 @@ class TeamController {
         if(!id) return next(ErrorHandler.badRequest('Team Id Is Missing'));
         if(!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid Team Id'));
         let {name,description,status,leader} =req.body;
-        const image = req.file && req.file.filename;
+        const profile = req.file && req.file.filename;
         status = status && status.toLowerCase();
         if(leader && !mongoose.Types.ObjectId.isValid(leader)) return next(ErrorHandler.badRequest('Invalid Leader Id'));
         const team = {
             name,
             description,
             status,
-            image,
+            profile,
             leader
         }
         const teamResp = await teamService.updateTeam(id,team);
         return (teamResp.modifiedCount!=1) ? next(ErrorHandler.serverError('Failed To Update Team')) : res.json({success:true,message:'Team Updated'})
     }
+
+    deleteTeam = async (req,res,next) =>
+    {
+        try {
+            const { id } = req.params;
+            console.log("Deleting team:", id);
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+              console.log("Invalid ID");
+              return next(ErrorHandler.badRequest('Invalid Team ID'));
+            }
+            const deletedTeam = await teamService.deleteTeam({ _id: id });
+            console.log("Deleted team result:", deletedTeam);
+            if (!deletedTeam)
+              return next(ErrorHandler.notFound('Team not found or already deleted'));
+            res.json({ success: true, message: 'Team deleted successfully' });
+          } catch (error) {
+            console.error("Delete team error:", error);
+            res.json({ success: false, error });
+          }
+    };   
 
     addMember = async (req,res,next) =>
     {

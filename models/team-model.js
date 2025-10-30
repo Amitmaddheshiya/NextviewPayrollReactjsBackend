@@ -17,7 +17,7 @@ const teamScheam = new Schema({
         required:false,
         default:'This team does not have any description'
     },
-    image:{
+    profile:{
         type:String,
         required:false,
         default:'team.png'
