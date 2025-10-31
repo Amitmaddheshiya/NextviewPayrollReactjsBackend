@@ -80,6 +80,23 @@ const userSchema = new Schema({
     bankName: { type: String, trim: true, default: '' },
     accountNumber: { type: String, trim: true, default: '' },
     ifscCode: { type: String, trim: true, default: '' },
+     // 🆕 Newly Added Fields
+    workType: {
+        type: String,
+        enum: ['Onsite', 'Remote', 'Hybrid'],
+        default: 'Full Time',
+        trim: true
+    },
+    uan: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    esi: {
+        type: String,
+        trim: true,
+        default: ''
+    },
 }, { timestamps: true });
 
 // ===============================

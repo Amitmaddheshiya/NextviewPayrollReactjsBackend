@@ -7,178 +7,190 @@ const crypto = require('crypto');
 const teamService = require('../services/team-service');
 const attendanceService = require('../services/attendance-service');
 
-
 class UserController {
 
- createUser = async (req, res) => {
-  try {
-    const {
-      name,
-      username,
-      email,
-      mobile,
-      password,
-      type,
-      address,
-      designation,
-      date,
-      panNumber,
-      aadhaarNumber,
-      bankName,
-      accountNumber,
-      ifscCode,
-    } = req.body;
+  // ===========================
+  // CREATE USER
+  // ===========================
+  createUser = async (req, res) => {
+    try {
+      const {
+        name,
+        username,
+        email,
+        mobile,
+        password,
+        type,
+        address,
+        designation,
+        date,
+        panNumber,
+        aadhaarNumber,
+        bankName,
+        accountNumber,
+        ifscCode,
+        workType,   // ✅ added
+        uan,        // ✅ added
+        esi,        // ✅ added
+      } = req.body;
 
-    // ✅ Ensure username is always a string
-    const finalUsername =
-      typeof username === "string"
-        ? username
-        : Array.isArray(username)
-        ? username[0]
-        : "";
+      const finalUsername =
+        typeof username === "string"
+          ? username
+          : Array.isArray(username)
+          ? username[0]
+          : "";
 
-    if (!finalUsername) {
-      return res.status(400).json({ success: false, message: "Enter Username" });
+      if (!finalUsername) {
+        return res.status(400).json({ success: false, message: "Enter Username" });
+      }
+
+      const userObj = {
+        name,
+        username: finalUsername,
+        email,
+        mobile,
+        password,
+        type,
+        address,
+        designation,
+        date,
+        panNumber,
+        aadhaarNumber,
+        bankName,
+        accountNumber,
+        ifscCode,
+        workType,   // ✅ added
+        uan,        // ✅ added
+        esi,        // ✅ added
+        profile: req.file ? req.file.filename : "user.png",
+      };
+
+      const user = new User(userObj);
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "User Created Successfully",
+        data: user,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        message: err.message || "Something went wrong",
+      });
     }
+  };
 
-    const userObj = {
-      name,
-      username: finalUsername, // ✅ guaranteed string
-      email,
-      mobile,
-      password,
-      type,
-      address,
-      designation,
-      date,
-      panNumber,
-      aadhaarNumber,
-      bankName,
-      accountNumber,
-      ifscCode,
-      profile: req.file ? req.file.filename : "user.png",
-    };
+  // ===========================
+  // UPDATE USER
+  // ===========================
+  updateUser = async (req, res, next) => {
+    try {
+      const file = req.file;
+      const { id } = req.params;
+      const {
+        name,
+        email,
+        mobile,
+        password,
+        type,
+        status,
+        address,
+        designation,
+        date,
+        panNumber,
+        aadhaarNumber,
+        bankName,
+        accountNumber,
+        ifscCode,
+        workType,   // ✅ added
+        uan,        // ✅ added
+        esi,        // ✅ added
+      } = req.body;
 
-    const user = new User(userObj);
-    await user.save();
+      if (!mongoose.Types.ObjectId.isValid(id))
+        return next(ErrorHandler.badRequest("Invalid User Id"));
 
-    res.status(200).json({
+      const dbUser = await userService.findUser({ _id: id });
+      if (!dbUser) return next(ErrorHandler.notFound("User not found"));
+
+      const userData = {
+        name: name || dbUser.name,
+        email: email || dbUser.email,
+        mobile: mobile || dbUser.mobile,
+        password: password || dbUser.password,
+        type: type || dbUser.type,
+        status: status || dbUser.status,
+        address: address || dbUser.address,
+        designation: designation || dbUser.designation,
+        date: date || dbUser.date,
+        panNumber: panNumber || dbUser.panNumber,
+        aadhaarNumber: aadhaarNumber || dbUser.aadhaarNumber,
+        bankName: bankName || dbUser.bankName,
+        accountNumber: accountNumber || dbUser.accountNumber,
+        ifscCode: ifscCode || dbUser.ifscCode,
+        workType: workType || dbUser.workType,   // ✅ added
+        uan: uan || dbUser.uan,                  // ✅ added
+        esi: esi || dbUser.esi,                  // ✅ added
+        profile: file ? file.filename : dbUser.profile,
+      };
+
+      const updatedUser = await userService.updateUser(id, userData);
+      if (!updatedUser)
+        return next(ErrorHandler.serverError("Failed To Update Account"));
+
+      res.json({
+        success: true,
+        message: "User Updated Successfully",
+        data: updatedUser,
+      });
+    } catch (error) {
+      console.error("Update User Error:", error);
+      res.json({ success: false, error });
+    }
+  };
+
+  // ===========================
+  // REMAINING METHODS (unchanged)
+  // ===========================
+
+  getUsers = async (req, res, next) => {
+    const type = req.path.split('/').pop().replace('s', '');
+    const emps = await userService.findUsers({ type });
+    if (!emps || emps.length < 1)
+      return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} Found`));
+    const employees = emps.map((o) => new UserDto(o));
+    res.json({
       success: true,
-      message: "User Created Successfully",
-      data: user,
+      message: `${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} List Found`,
+      data: employees,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: err.message || "Something went wrong",
-    });
-  }
-};
+  };
 
+  getFreeEmployees = async (req, res, next) => {
+    const emps = await userService.findUsers({ type: 'employee', team: null });
+    if (!emps || emps.length < 1)
+      return next(ErrorHandler.notFound(`No Free Employee Found`));
+    const employees = emps.map((o) => new UserDto(o));
+    res.json({ success: true, message: 'Free Employees List Found', data: employees });
+  };
 
-    updateUser = async (req, res, next) => {
-  try {
-    const file = req.file; // ✅ If new image uploaded
-    const { id } = req.params;
-    const {
-      name,
-      email,
-      mobile,
-      password,
-      type,
-      status,
-      address,
-      designation,
-      date,
-      panNumber,
-      aadhaarNumber,
-      bankName,
-      accountNumber,
-      ifscCode,
-    } = req.body;
-
-    // ✅ Validate user ID
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return next(ErrorHandler.badRequest("Invalid User Id"));
-
-    // ✅ Find existing user
-    const dbUser = await userService.findUser({ _id: id });
-    if (!dbUser) return next(ErrorHandler.notFound("User not found"));
-
-    // ✅ Prepare updated user data
-    const userData = {
-      name: name || dbUser.name,
-      email: email || dbUser.email,
-      mobile: mobile || dbUser.mobile,
-      password: password || dbUser.password,
-      type: type || dbUser.type,
-      status: status || dbUser.status,
-      address: address || dbUser.address,
-      designation: designation || dbUser.designation,
-      date: date || dbUser.date,
-      panNumber: panNumber || dbUser.panNumber,
-      aadhaarNumber: aadhaarNumber || dbUser.aadhaarNumber,
-      bankName: bankName || dbUser.bankName,
-      accountNumber: accountNumber || dbUser.accountNumber,
-      ifscCode: ifscCode || dbUser.ifscCode,
-      profile: file ? file.filename : dbUser.profile, // ✅ update if new image, else keep old
-    };
-
-    // ✅ Update user in DB
-    const updatedUser = await userService.updateUser(id, userData);
-    if (!updatedUser)
-      return next(ErrorHandler.serverError("Failed To Update Account"));
-
-    res.json({ success: true, message: "User Updated Successfully", data: updatedUser });
-  } catch (error) {
-    console.error("Update User Error:", error);
-    res.json({ success: false, error });
-  }
-};
-
-
-    getUsers = async (req,res,next) =>
-    {
-        const type = req.path.split('/').pop().replace('s','');
-        const emps = await userService.findUsers({type});
-        if(!emps || emps.length<1) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} Found`));
-        const employees = emps.map((o)=> new UserDto(o));
-        res.json({success:true,message:`${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} List Found`,data:employees})
+  deleteUser = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id))
+        return next(ErrorHandler.badRequest('Invalid User ID'));
+      const deletedUser = await userService.deleteUser({ _id: id });
+      if (!deletedUser)
+        return next(ErrorHandler.notFound('User not found or already deleted'));
+      res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.json({ success: false, error });
     }
-
-
-    getFreeEmployees = async (req,res,next) =>
-    {
-        const emps = await userService.findUsers({type:'employee',team:null});
-        if(!emps || emps.length<1) return next(ErrorHandler.notFound(`No Free Employee Found`));
-        const employees = emps.map((o)=> new UserDto(o));
-        res.json({success:true,message:'Free Employees List Found',data:employees})
-    }
-
-    deleteUser = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    console.log("Deleting user:", id);
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log("Invalid ID");
-      return next(ErrorHandler.badRequest('Invalid User ID'));
-    }
-
-    const deletedUser = await userService.deleteUser({ _id: id });
-    console.log("Deleted user result:", deletedUser);
-
-    if (!deletedUser)
-      return next(ErrorHandler.notFound('User not found or already deleted'));
-
-    res.json({ success: true, message: 'User deleted successfully' });
-  } catch (error) {
-    console.error("Delete user error:", error);
-    res.json({ success: false, error });
-  }
-};
-
+  };
 
     getUser = async (req,res,next) =>
     {
@@ -245,6 +257,81 @@ class UserController {
             res.json({success:false,error});    
         } 
     }
+
+    checkInEmployeeAttendance = async (req, res, next) => {
+  try {
+    const { employeeID } = req.body;
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const d = new Date();
+
+    const attendanceIn = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const companyStart = new Date();
+    companyStart.setHours(10, 30, 0, 0);
+    const late = d > companyStart ? "Yes" : "No";
+
+    const newAttendance = {
+      employeeID,
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      date: d.getDate(),
+      day: days[d.getDay()],
+      present: true,
+      attendanceIn,
+      late
+    };
+
+    const isMarked = await attendanceService.findAttendance({
+      employeeID,
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      date: d.getDate(),
+    });
+
+    if (isMarked)
+      return res.json({ success: false, message: "Already checked in today!" });
+
+    const resp = await attendanceService.markAttendance(newAttendance);
+    res.json({ success: true, data: resp, message: "Checked In successfully!" });
+  } catch (error) {
+    res.json({ success: false, error });
+  }
+};
+
+checkOutEmployeeAttendance = async (req, res, next) => {
+  try {
+    const { employeeID } = req.body;
+    const d = new Date();
+
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const date = d.getDate();
+
+    const record = await attendanceService.findTodayAttendance(employeeID, year, month, date);
+    if (!record)
+      return res.json({ success: false, message: "Please check in first!" });
+
+    if (record.attendanceOut)
+      return res.json({ success: false, message: "Already checked out today!" });
+
+    const attendanceOut = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Calculate total hours
+    const inTime = new Date(`${year}-${month}-${date} ${record.attendanceIn}`);
+    const outTime = new Date(`${year}-${month}-${date} ${attendanceOut}`);
+    const totalMs = outTime - inTime;
+    const totalHours = `${Math.floor(totalMs / (1000 * 60 * 60))}h ${Math.floor((totalMs / (1000 * 60)) % 60)}m`;
+
+    const updated = await attendanceService.updateAttendanceOut(record._id, {
+      attendanceOut,
+      totalHours
+    });
+
+    res.json({ success: true, data: updated, message: "Checked Out successfully!" });
+  } catch (error) {
+    res.json({ success: false, error });
+  }
+};
+
 
     viewEmployeeAttendance = async (req,res,next) => {
         try {
@@ -348,21 +435,25 @@ class UserController {
         }
     }
 
-    updateEmployeeSalary = async (req,res,next) => {
-        try {
-            const body = req.body;
-            const {employeeID} = body;
-            const d = new Date();
-            body["assignedDate"] = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
-            const isSalaryUpdated = await userService.updateSalary({employeeID},body);
-            console.log(isSalaryUpdated);
-            if(!isSalaryUpdated) return next(ErrorHandler.serverError('Failed to update salary'));
-            res.json({success:true,message:'Salary Updated'});
-            
-        } catch (error) {
-            res.json({success:false,error});
-        }
-    }
+   updateEmployeeSalary = async (req, res, next) => {
+  try {
+    const body = req.body;
+    const { employeeID } = body;
+    const d = new Date();
+    body["assignedDate"] = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+    const isSalaryUpdated = await userService.updateEmployeeSalary({ employeeID }, body);
+
+    if (!isSalaryUpdated) 
+      return next(ErrorHandler.serverError('Failed to update salary'));
+
+    res.json({ success: true, message: 'Salary Updated' });
+  } catch (error) {
+    console.error("Update Salary Error:", error);
+    res.json({ success: false, message: 'Update Failed', error: error.message });
+  }
+};
+
 
     viewSalary = async (req,res,next) => {
         try {

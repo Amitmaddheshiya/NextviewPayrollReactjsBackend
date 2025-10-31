@@ -22,6 +22,7 @@ class UserService {
 
   updatePassword = async (_id, password) => await UserModel.updateOne({ _id }, { password });
 
+
   findLeaders = async () =>
     await UserModel.aggregate([
       { $match: { type: 'leader' } },
@@ -59,13 +60,17 @@ class UserService {
   assignSalary = async (data) => UserSalaryModel.create(data);
 
   findSalary = async (data) =>
-    UserSalaryModel.findOne(data).populate('employeeID', 'name email username mobile type designation');
+    UserSalaryModel.findOne(data).populate('employeeID', 'name email username mobile type designation address profile');
 
   findAllSalary = async (data = {}) =>
-    UserSalaryModel.find(data).populate('employeeID', 'name email username mobile type designation');
+    UserSalaryModel.find(data).populate('employeeID', 'name email username mobile type designation address profile');
 
-  updateSalary = async (data, updatedSalary) =>
-    UserSalaryModel.findOneAndUpdate(data, updatedSalary);
+updateEmployeeSalary = async (data, updatedSalary) => {
+  return await UserSalaryModel.findOneAndUpdate(data, updatedSalary, { new: true });
+};
+
+
+
 
   updateLeaveApplication = async (id, updatedLeave) =>
     LeaveModel.findByIdAndUpdate(id, updatedLeave);

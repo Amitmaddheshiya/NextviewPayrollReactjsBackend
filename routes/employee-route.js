@@ -12,5 +12,8 @@ router.post('/view-employee-attendance',asyncMiddleware(userController.viewEmplo
 router.post('/apply-leave-application',asyncMiddleware(userController.applyLeaveApplication));
 router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveApplications));
 router.post('/view-salary',asyncMiddleware(userController.viewSalary));
+router.post('/checkin-employee-attendance', asyncMiddleware(userController.checkInEmployeeAttendance));
+router.post('/checkout-employee-attendance', asyncMiddleware(userController.checkOutEmployeeAttendance));
+
 
 module.exports = router;

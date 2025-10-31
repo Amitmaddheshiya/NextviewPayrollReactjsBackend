@@ -38,6 +38,7 @@ router.get('/user-salaries', asyncMiddleware(userController.viewUserSalaries));
 router.delete('/user/:id', asyncMiddleware(userController.deleteUser)); // ✅ keep after other user routes
 router.delete('/team/:id', asyncMiddleware(teamController.deleteTeam)); // ✅ keep after other team routes
 router.patch('/update-team/:id', asyncMiddleware(teamController.updateTeamData)); // <-- ADD THIS
+router.patch('/update-salary/:id', asyncMiddleware(userController.updateEmployeeSalary));
 
 
 
