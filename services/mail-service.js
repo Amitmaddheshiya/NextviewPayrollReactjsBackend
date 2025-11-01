@@ -12,22 +12,21 @@ class MailService{
     }
 
 
-    sendMail  = async (to,subject,text) =>
-    {
-        const mailOption = {
-            from:smtpAuthUser,
-            to,
-            subject,
-            text
-        }
+ sendMail  = async (to,subject,text) => {
+  const mailOption = {
+    from: process.env.SMTP_AUTH_USER,
+    to,
+    subject,
+    text,
+  };
 
-        await transport.sendMail(mailOption,(err,info)=>
-        {
-            console.log(err);
-            console.log(info);
-        })
-
-    }
+  try {
+    const info = await transport.sendMail(mailOption);
+    console.log("✅ Mail sent successfully:", info.response);
+  } catch (err) {
+    console.error("❌ Mail send failed:", err);
+  }
+};
 
 }
 

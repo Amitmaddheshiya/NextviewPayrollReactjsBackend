@@ -346,6 +346,47 @@ checkOutEmployeeAttendance = async (req, res, next) => {
         }
     }
 
+updateEmployeeAttendance = async (req, res, next) => {
+  try {
+    const { id, attendanceIn, attendanceOut } = req.body;
+
+    if (!id) return res.json({ success: false, message: "Attendance ID required" });
+
+    const attendance = await attendanceService.findAttendance({ _id: id });
+    if (!attendance) return res.json({ success: false, message: "Attendance not found" });
+
+    // 🔹 Calculate total hours
+    const inTime = new Date(`${attendance.year}-${attendance.month}-${attendance.date} ${attendanceIn}`);
+    const outTime = new Date(`${attendance.year}-${attendance.month}-${attendance.date} ${attendanceOut}`);
+    const totalHours = (outTime - inTime) / (1000 * 60 * 60);
+
+    // 🔹 Late logic
+    const isLate = inTime.getHours() >= 10 ? "Yes" : "No";
+
+    // 🔹 Time status logic
+    let timeStatus = "-";
+    const day = (attendance.day || "").toLowerCase();
+    if (day === "sunday") timeStatus = "Full Time";
+    else if (day === "saturday") timeStatus = totalHours >= 5 ? "Full Time" : "Half Time";
+    else timeStatus = totalHours >= 7 ? "Full Time" : "Half Time";
+
+    const updateData = {
+      attendanceIn,
+      attendanceOut,
+      totalHours: totalHours.toFixed(2),
+      late: isLate,
+      timeStatus,
+    };
+
+    const updated = await attendanceService.updateAttendance(id, updateData);
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    res.json({ success: false, error });
+  }
+};
+
+
   applyLeaveApplication = async (req, res, next) => {
     try {
         const data = req.body;

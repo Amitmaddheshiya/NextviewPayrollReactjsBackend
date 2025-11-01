@@ -39,6 +39,7 @@ router.delete('/user/:id', asyncMiddleware(userController.deleteUser)); // ✅ k
 router.delete('/team/:id', asyncMiddleware(teamController.deleteTeam)); // ✅ keep after other team routes
 router.patch('/update-team/:id', asyncMiddleware(teamController.updateTeamData)); // <-- ADD THIS
 router.patch('/update-salary/:id', asyncMiddleware(userController.updateEmployeeSalary));
+router.post('/update-employee-attendance', asyncMiddleware(userController.updateEmployeeAttendance));
 
 
 

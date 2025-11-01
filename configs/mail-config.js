@@ -1,20 +1,14 @@
-const nodeMailer = require('nodemailer');
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = process.env.SMTP_PORT; 
-const smtpSecure = process.env.SMTP_SECURE;
-const smtpRequireTLS = process.env.SMTP_REQUIRE_TLS;
-const smtpAuthUser = process.env.SMTP_AUTH_USER;
-const smtpAuthPass = process.env.SMTP_AUTH_PASS;
+const nodemailer = require("nodemailer");
 
-transpoter = nodeMailer.createTransport({
-    host:smtpHost,
-    port:smtpPort,
-    secure:smtpSecure,
-    requireTLS : smtpRequireTLS,
-    auth:{
-        user:smtpAuthUser,
-        pass:smtpAuthPass
-    }
-})
+const transporter = nodemailer.createTransport({
+  service: "gmail", // ✅ Gmail ke liye direct service use karo
+  auth: {
+    user: process.env.SMTP_USER, // e.g. amitmaddheshiya099@gmail.com
+    pass: process.env.SMTP_PASS, // Gmail app password (16-digit)
+  },
+  tls: {
+    rejectUnauthorized: false, // ✅ Ignore self-signed SSL
+  },
+});
 
-module.exports = transpoter;
+module.exports = transporter;
