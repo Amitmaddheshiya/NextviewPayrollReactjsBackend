@@ -10,7 +10,7 @@ const LeaveSchema = new Schema({
     startDate: { type: String, required: true },
     endDate: { type: String, required: true },
     appliedDate: { type: String, required: true },
-    period: { type: Number, required: true, min: 1, max: 10 },
+    period: { type: Number, required: true, min: 1, max: 60 },
     reason: { type: String, required: true },
     adminResponse: { type: String, default: 'Pending' }, // default matches controller
 });

@@ -12,6 +12,10 @@ const leaderRoute = require('./routes/leader-route');
 const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const {auth, authRole} = require('./middlewares/auth-middleware');
+const payrollPolicyRoutes = require('./routes/payrollPolicyRoutes');
+
+
+
 const app = express();
 
 // Database Connection
@@ -32,18 +36,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Routes
-app.use('/api/auth',authRoute);
-app.use('/api/admin',auth,authRole(['admin']),adminRoute);
-app.use('/api/employee',auth,authRole(['employee','leader']),employeeRoute);
-app.use('/api/leader',auth,authRole(['leader']),leaderRoute);
+// ✅ Mount routes
+app.use('/api/auth', authRoute);
+app.use('/api/admin', auth, authRole(['admin']), adminRoute);
+app.use('/api/admin', auth, authRole(['admin']), payrollPolicyRoutes);
+app.use('/api/employee', auth, authRole(['employee','leader']), employeeRoute);
+app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
 
-
+// ... your existing middlewares (bodyParser, cookieParser, sessions, passport, etc.)
 const path = require('path');
-
 // ✅ Serve uploaded images statically
 app.use('/storage', express.static(path.join(__dirname, 'storage')));
-
 
 //Middlewares;
 app.use((req,res,next)=>
@@ -54,6 +57,30 @@ app.use((req,res,next)=>
 app.use(errorMiddleware)
 
 
+
+// ✅ Show all registered routes (including nested ones)
+const listRoutes = (path, layer) => {
+  if (layer.route) {
+    // Direct routes
+    const routePath = path + layer.route.path;
+    const methods = Object.keys(layer.route.methods)
+      .map(m => m.toUpperCase())
+      .join(', ');
+    console.log(`🛠 ${methods} ${routePath}`);
+  } else if (layer.name === 'router' && layer.handle.stack) {
+    // Nested routers (e.g. /api/admin)
+    layer.handle.stack.forEach(subLayer => {
+      listRoutes(path + (layer.regexp?.source === '^\\/?$' ? '' : layer.regexp.source.replace(/\\\//g, '/').replace(/\^|\$|\?/g, '')), subLayer);
+    });
+  }
+};
+
+// Call this *after* all your app.use(...)
+if (app._router && app._router.stack) {
+  console.log('\n📜 Registered Routes:\n');
+  app._router.stack.forEach(layer => listRoutes('', layer));
+  console.log('\n🚀 Server running on port', PORT, '\n');
+}
 
 
 

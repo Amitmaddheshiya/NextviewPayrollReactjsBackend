@@ -3,6 +3,7 @@ const userController = require('../controllers/user-controller');
 const teamController = require('../controllers/team-controller');
 const upload = require('../services/file-upload-service');
 const asyncMiddleware = require('../middlewares/async-middleware');
+const expenseController = require('../controllers/expenseController');
 
 // existing imports at top
 router.post('/view-employee-attendance',asyncMiddleware(userController.viewEmployeeAttendance));
@@ -40,6 +41,12 @@ router.delete('/team/:id', asyncMiddleware(teamController.deleteTeam)); // ✅ k
 router.patch('/update-team/:id', asyncMiddleware(teamController.updateTeamData)); // <-- ADD THIS
 router.patch('/update-salary/:id', asyncMiddleware(userController.updateEmployeeSalary));
 router.post('/update-employee-attendance', asyncMiddleware(userController.updateEmployeeAttendance));
+router.patch('/update-leave/:id', asyncMiddleware(userController.updateLeaveApplication)); // <-- ADD THIS
+// 💰 Employee Expense APIs
+router.get("/expenses", asyncMiddleware(expenseController.getExpenses));
+router.get("/expenses/:id", asyncMiddleware(expenseController.getExpenseById));
+router.patch("/expenses/:id", asyncMiddleware(expenseController.updateExpense));
+router.get("/calculate-current-month-salaries", asyncMiddleware(userController.calculateCurrentMonthSalaries));
 
 
 

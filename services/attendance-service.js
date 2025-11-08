@@ -2,6 +2,8 @@ const Attendance = require('../models/attendance-model');
 
 class AttendanceService {
   markAttendance = async data => Attendance.create(data);
+    // ✅ Alias for controller (fixes "not a function" error)
+  createAttendance = async data => Attendance.create(data);
   findAttendance = async data => Attendance.findOne(data);
   findAllAttendance = async data => Attendance.find(data);
   findTodayAttendance = async (employeeID, year, month, date) =>

@@ -19,7 +19,10 @@ const storageEngine = multer.diskStorage({
         uploadPath = './storage/images/profile/';
     } else if (req.originalUrl.includes('/video')) {
         uploadPath = './storage/videos/';
-    } else {
+    } 
+    else if (req.originalUrl.includes('/expenses')) {
+    uploadPath = './storage/images/expenses/';
+}else {
         uploadPath = './storage/images/others/';
     }
 
