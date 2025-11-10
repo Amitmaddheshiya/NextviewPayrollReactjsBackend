@@ -25,11 +25,11 @@ dbConnection();
 const {CLIENT_URL} = process.env;
 console.log(CLIENT_URL);
 
-//Cors Option
-const corsOption = {
-    credentials:true,
-    origin:['http://localhost:3000','http://1.1.1.111:3000', CLIENT_URL]
-}
+//Cors Optio
+app.use(cors({
+  origin: "https://nextviewpayrollreactjsfrontend.vercel.app", // frontend URL
+  credentials: true, // if using cookies
+}));
 
 cron.schedule(
   '0 07 15 * * *',
