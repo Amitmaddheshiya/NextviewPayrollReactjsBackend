@@ -13,6 +13,8 @@ const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const {auth, authRole} = require('./middlewares/auth-middleware');
 const payrollPolicyRoutes = require('./routes/payrollPolicyRoutes');
+const cron = require("node-cron");
+const userController = require("./controllers/user-controller");
 
 
 
@@ -20,7 +22,6 @@ const app = express();
 
 // Database Connection
 dbConnection();
-
 const {CLIENT_URL} = process.env;
 console.log(CLIENT_URL);
 
@@ -29,6 +30,19 @@ const corsOption = {
     credentials:true,
     origin:['http://localhost:3000','http://1.1.1.111:3000', CLIENT_URL]
 }
+
+cron.schedule(
+  '0 07 15 * * *',
+  () => {
+    console.log("⏰ Running Auto Attendance at 10:30 AM IST...");
+    userController.autoMarkAttendanceForAll();
+  },
+  {
+    timezone: "Asia/Kolkata"
+  }
+);
+
+
 
 //Configuration
 app.use(cors(corsOption));

@@ -14,197 +14,81 @@ const attendanceService = require('../services/attendance-service');
 
 
 class UserController {
-
-//   calculateCurrentMonthSalaries = async (req, res) => {
-//   try {
-//     const currentDate = new Date();
-//     const year = currentDate.getFullYear();
-//     const month = currentDate.getMonth() + 1;
-//     const today = currentDate.getDate();
-
-//     const [users, salaries, attendances, leaves, expenses, payrollPolicy] = await Promise.all([
-//       User.find({}),
-//       UserSalaries.find({}),
-//       Attendance.find({ year, month }),
-//       Leave.find({ year, month }),
-//       Expense.find({}),
-//       PayrollPolicy.findOne({}),
-//     ]);
-
-//     const results = users.map((user) => {
-//       const empSalary = salaries.find(
-//         (s) => s.employeeID.toString() === user._id.toString()
-//       );
-
-//       const grossSalary = empSalary?.earnings?.gross || 0;
-//       const perDaySalary = grossSalary / 26;
-
-//       const deductions = {
-//         pfEmployee: empSalary?.deductions?.pfEmployee || 0,
-//         esiEmployee: empSalary?.deductions?.esiEmployee || 0,
-//         tdsMonthly: empSalary?.deductions?.tdsMonthly || 0,
-//         professionalTax: empSalary?.deductions?.professionalTax || 0,
-//       };
-
-//       const totalMonthlyDeduction =
-//         deductions.pfEmployee +
-//         deductions.esiEmployee +
-//         deductions.tdsMonthly +
-//         deductions.professionalTax;
-
-//       // ✅ Monthly Net Pay (fixed for full month)
-//       const monthlyNetPay = Math.max(0, grossSalary - totalMonthlyDeduction);
-
-//       // ✅ Till-date attendance
-//       const empAttendance = attendances.filter(
-//         (a) => a.employeeID.toString() === user._id.toString()
-//       );
-
-//       const tillDateAttendance = empAttendance.filter(
-//         (a) => a.present && a.date <= today
-//       ).length;
-
-//       // ✅ Sundays calculation (assuming Sunday off)
-//       const totalSundays = Array.from({ length: today }, (_, i) => i + 1).filter(
-//         (d) => new Date(year, month - 1, d).getDay() === 0
-//       ).length;
-
-//       // ✅ Paid leaves till today
-//       const empLeaves = leaves.filter(
-//         (l) =>
-//           (l.applicantID?.toString() || l.employeeID?.toString()) ===
-//             user._id.toString() && l.adminResponse === "Approved"
-//       );
-//       const paidLeavesTillDate =
-//         payrollPolicy?.payForApprovedLeaves?.enabled === "Yes"
-//           ? empLeaves.filter((l) => new Date(l.startDate).getDate() <= today)
-//               .length
-//           : 0;
-
-//       // ✅ Holidays (you can make it dynamic later)
-//       const holidaysTillDate = payrollPolicy?.holidays?.filter?.(
-//         (h) =>
-//           new Date(h.date).getFullYear() === year &&
-//           new Date(h.date).getMonth() + 1 === month &&
-//           new Date(h.date).getDate() <= today
-//       )?.length || 0;
-
-//       // ✅ Total payable days till date
-//       // ✅ Total payable days till date
-// let payableDaysTillDate = 0;
-
-// // Salary milni chahiye agar employee present ya approved leave par ho
-// if (tillDateAttendance > 0 || paidLeavesTillDate > 0) {
-//   payableDaysTillDate =
-//     tillDateAttendance + totalSundays + paidLeavesTillDate + holidaysTillDate;
-// } else {
-//   // agar employee ek bhi din present nahi hai, to 0 payable days
-//   payableDaysTillDate = 0;
-// }
-
-// // ✅ Till Date Salary (per day * payable days)
-// const tillDateSalary =
-//   payableDaysTillDate > 0
-//     ? Math.max(
-//         0,
-//         perDaySalary * payableDaysTillDate -
-//           (totalMonthlyDeduction / 26) * payableDaysTillDate
-//       )
-//     : 0;
-
-//       // ✅ Approved Expenses till date
-//       const empExpenses = expenses.filter(
-//         (e) =>
-//           e.employeeID.toString() === user._id.toString() &&
-//           e.adminResponse === "Approved" &&
-//           new Date(e.expenseDate).getDate() <= today
-//       );
-//       const tillDateExpense = empExpenses.reduce(
-//         (sum, e) => sum + (e.amount || 0),
-//         0
-//       );
-
-//       const totalTillDatePay = tillDateSalary + tillDateExpense;
-
-//       return {
-//         employeeID: user._id,
-//         name: user.name,
-//         email: user.email,
-//         month,
-//         year,
-//         earnings: { gross: Number(grossSalary.toFixed(2)) },
-//         perDaySalary: Number(perDaySalary.toFixed(2)),
-//         deductions,
-//         netPay: Number(monthlyNetPay.toFixed(2)), // full month salary
-//         tillDateSalary: Number(tillDateSalary.toFixed(2)), // till date earned
-//         totalExpenses: Number(tillDateExpense.toFixed(2)), // approved till date
-//         totalPay: Number(totalTillDatePay.toFixed(2)), // till date + expenses
-//       };
-//     });
-
-//     res.json({
-//       success: true,
-//       data: results,
-//       message: "Till date salary calculation done successfully",
-//     });
-//   } catch (err) {
-//     console.error("❌ Salary calc error:", err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error calculating salary",
-//       error: err.message,
-//     });
-//   }
-// };
-
-calculateCurrentMonthSalaries = async (req, res) => {
+  calculateCurrentMonthSalaries = async (req, res) => {
   try {
     const currentDate = new Date();
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
 
-    const [users, salaries, attendances, expenses] = await Promise.all([
+    // Fetch all required collections
+    const [users, salaries, attendances, expenses, policy] = await Promise.all([
       User.find({}),
       UserSalaries.find({}),
       Attendance.find({ year, month }),
-      Expense.find({})
+      Expense.find({}),
+      PayrollPolicy.findOne({})
     ]);
 
-    const workingDays = 26;
+    if (!policy) {
+      return res.status(404).json({ success: false, message: "Payroll Policy not found" });
+    }
+
+    // Dynamic working days from payroll policy
+    const workingDays = policy.salaryRules?.workingDaysInMonth || 26;
+    const halfDayFraction = policy.halfDayRule?.fraction || 0.5; // 50% default
 
     const results = users.map((user) => {
       // ===== Salary Assigned =====
-      const empSalary = salaries.find(
-        (s) => s.employeeID.toString() === user._id.toString()
-      );
-
+      const empSalary = salaries.find(s => s.employeeID.toString() === user._id.toString());
       const grossSalary = empSalary?.earnings?.gross || 0;
       const netPaySalary = empSalary?.netPay || 0;
 
-      // Per day salary (company rule: 26 days)
+      // Per day salary based on payroll policy workingDaysInMonth
       const perDaySalary = Number((netPaySalary / workingDays).toFixed(2));
 
       // ===== Attendance =====
-      const empAttendance = attendances.filter(
-        (a) => a.employeeID.toString() === user._id.toString()
-      );
+      const empAttendance = attendances.filter(a => a.employeeID.toString() === user._id.toString());
 
-      const presentDays = empAttendance.filter((a) => a.present).length;
+      // Calculate till date salary with half-day logic
+      let tillDateSalary = 0;
+      let presentDays = 0; // Updated to include half-day logic
 
-      // ===== Till Date Salary =====
-      const tillDateSalary = Number((perDaySalary * presentDays).toFixed(2));
+      empAttendance.forEach(a => {
+        if (!a.present) return;
+
+        const dayLower = (a.day || "").toLowerCase();
+        let daySalary = perDaySalary;
+
+        const hours = parseFloat(a.totalHours) || 0;
+
+        if (dayLower === "saturday" && hours < 5) {
+          daySalary = perDaySalary * halfDayFraction; // Half-day
+          presentDays += halfDayFraction;
+        } else if (!["saturday", "sunday"].includes(dayLower) && hours < 7) {
+          daySalary = perDaySalary * halfDayFraction; // Half-day
+          presentDays += halfDayFraction;
+        } else {
+          // Full day
+          presentDays += 1;
+        }
+
+        tillDateSalary += daySalary;
+      });
+
+      tillDateSalary = Number(tillDateSalary.toFixed(2));
+      presentDays = Number(presentDays.toFixed(1)); // Optional: 1 decimal for half-days
 
       // ===== Approved Expenses =====
-      const empExpenses = expenses.filter(
-        (e) =>
-          e.employeeID.toString() === user._id.toString() &&
-          e.adminResponse === "Approved" &&
-          new Date(e.expenseDate).getFullYear() === year &&
-          new Date(e.expenseDate).getMonth() + 1 === month
+      const empExpenses = expenses.filter(e =>
+        e.employeeID.toString() === user._id.toString() &&
+        e.adminResponse === "Approved" &&
+        new Date(e.appliedDate).getFullYear() === year &&
+        new Date(e.appliedDate).getMonth() + 1 === month
       );
 
       const totalExpenses = empExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
+      // Total pay = till date salary + total approved expenses
       const totalPay = Number((tillDateSalary + totalExpenses).toFixed(2));
 
       return {
@@ -230,7 +114,7 @@ calculateCurrentMonthSalaries = async (req, res) => {
 
         netPay: netPaySalary, // monthly net pay assigned
 
-        presentDays, // for reference in frontend
+        presentDays, // Now includes half-day fraction
 
         tillDateSalary,
         totalExpenses,
@@ -253,6 +137,123 @@ calculateCurrentMonthSalaries = async (req, res) => {
   }
 };
 
+
+// calculateCurrentMonthSalaries = async (req, res) => {
+//   try {
+//     const currentDate = new Date();
+//     const year = currentDate.getFullYear();
+//     const month = currentDate.getMonth() + 1;
+
+//     // Fetch all required collections
+//     const [users, salaries, attendances, expenses, policy] = await Promise.all([
+//       User.find({}),
+//       UserSalaries.find({}),
+//       Attendance.find({ year, month }),
+//       Expense.find({}),
+//       PayrollPolicy.findOne({})
+//     ]);
+
+//     if (!policy) {
+//       return res.status(404).json({ success: false, message: "Payroll Policy not found" });
+//     }
+
+//     // ✅ Dynamic working days from payroll policy
+//     const workingDays = policy.salaryRules?.workingDaysInMonth || 26;
+//     const halfDayFraction = policy.halfDayRule?.fraction || 0.5; // 50% default
+
+//     const results = users.map((user) => {
+//       // ===== Salary Assigned =====
+//       const empSalary = salaries.find(s => s.employeeID.toString() === user._id.toString());
+//       const grossSalary = empSalary?.earnings?.gross || 0;
+//       const netPaySalary = empSalary?.netPay || 0;
+
+//       // Per day salary based on payroll policy workingDaysInMonth
+//       const perDaySalary = Number((netPaySalary / workingDays).toFixed(2));
+
+//       // ===== Attendance =====
+//       const empAttendance = attendances.filter(a => a.employeeID.toString() === user._id.toString());
+
+//       // Calculate till date salary with half-day logic
+//       let tillDateSalary = 0;
+//       empAttendance.forEach(a => {
+//         if (!a.present) return;
+
+//         const dayLower = (a.day || "").toLowerCase();
+//         let daySalary = perDaySalary;
+
+//         const hours = parseFloat(a.totalHours) || 0;
+
+//         if (dayLower === "saturday" && hours < 5) {
+//           daySalary = perDaySalary * halfDayFraction; // Half-day
+//         } else if (!["saturday", "sunday"].includes(dayLower) && hours < 7) {
+//           daySalary = perDaySalary * halfDayFraction; // Half-day
+//         }
+
+//         tillDateSalary += daySalary;
+//       });
+
+//       tillDateSalary = Number(tillDateSalary.toFixed(2));
+
+//       // ===== Approved Expenses =====
+//       const empExpenses = expenses.filter(e =>
+//         e.employeeID.toString() === user._id.toString() &&
+//         e.adminResponse === "Approved" &&
+//         new Date(e.appliedDate).getFullYear() === year &&
+//         new Date(e.appliedDate).getMonth() + 1 === month
+//       );
+
+//       const totalExpenses = empExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+//       // Total pay = till date salary + total approved expenses
+//       const totalPay = Number((tillDateSalary + totalExpenses).toFixed(2));
+
+//       const presentDays = empAttendance.filter(a => a.present).length;
+
+//       return {
+//         employeeID: user._id,
+//         name: user.name,
+//         email: user.email,
+
+//         month,
+//         year,
+
+//         earnings: {
+//           gross: grossSalary,
+//         },
+
+//         perDaySalary,
+
+//         deductions: {
+//           pfEmployee: empSalary?.deductions?.pfEmployee || 0,
+//           esiEmployee: empSalary?.deductions?.esiEmployee || 0,
+//           tdsMonthly: empSalary?.deductions?.tdsMonthly || 0,
+//           professionalTax: empSalary?.deductions?.professionalTax || 0,
+//         },
+
+//         netPay: netPaySalary, // monthly net pay assigned
+
+//         presentDays, // reference for frontend
+
+//         tillDateSalary,
+//         totalExpenses,
+//         totalPay,
+//       };
+//     });
+
+//     res.json({
+//       success: true,
+//       data: results,
+//       message: "Till-date salary calculated successfully",
+//     });
+//   } catch (err) {
+//     console.error("Salary error:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error calculating salary",
+//       error: err.message,
+//     });
+//   }
+// };
 
   createUser = async (req, res) => {
     try {
@@ -733,91 +734,147 @@ updateEmployeeAttendance = async (req, res, next) => {
   }
 };
 
-
-
-//
 autoMarkAttendanceForAll = async () => {
   try {
+    console.log("Running Auto Attendance Cron Job...");
+
     const today = new Date();
+    const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
     const year = today.getFullYear();
     const month = today.getMonth() + 1;
     const date = today.getDate();
-    const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()];
+    const day = today.toLocaleString("en-US", { weekday: "long" });
 
-    const payroll = await PayrollPolicy.findOne({});
-    const users = await User.find({});
-    const leaves = await Leave.find({ adminResponse: "Approved" });
+    // 1️⃣ Fetch approved leaves for today
+    const approvedLeaves = await Leave.find({
+      adminResponse: "Approved",
+      startDate: { $lte: todayStr },
+      endDate: { $gte: todayStr }
+    });
 
-    const isFestivalHoliday =
-      payroll?.festivalHolidays?.enabled === "Yes" &&
-      payroll?.festivalHolidays?.days?.some(
-        (d) => new Date(d).toDateString() === today.toDateString()
+    if (!approvedLeaves.length) {
+      console.log("📌 No approved leaves for today");
+      return;
+    }
+
+    console.log("🎉 Approved Leaves detected — marking present=true");
+
+    // 2️⃣ Loop through approved leaves
+    for (const leave of approvedLeaves) {
+      // Upsert attendance for that employee
+      const attendance = await Attendance.findOneAndUpdate(
+        {
+          employeeID: leave.applicantID,
+          year,
+          month,
+          date
+        },
+        {
+          $set: {
+            present: true,
+            attendanceIn: "-",
+            attendanceOut: "-",
+            totalHours: "-",
+            late: "-",
+            status: "Approved Leave",
+            leaveID: leave._id
+          }
+        },
+        { upsert: true, new: true }
       );
 
-    const isInternationalHoliday =
-      payroll?.internationalHolidays?.enabled === "Yes" &&
-      payroll?.internationalHolidays?.days?.some(
-        (d) => new Date(d).toDateString() === today.toDateString()
+      console.log(
+        `✅ Attendance marked for user ${leave.applicantID} (${leave.applicantName}) on ${todayStr}`
       );
+    }
+  } catch (err) {
+    console.log("❌ Auto mark error:", err);
+  }
+};
+
+
+// autoMarkAttendanceForAll = async () => {
+//   try {
+//     const today = new Date();
+//     const year = today.getFullYear();
+//     const month = today.getMonth() + 1;
+//     const date = today.getDate();
+//     const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()];
+
+//     const payroll = await PayrollPolicy.findOne({});
+//     const users = await User.find({});
+//     const leaves = await Leave.find({ adminResponse: "Approved" });
+
+//     const isFestivalHoliday =
+//       payroll?.festivalHolidays?.enabled === "Yes" &&
+//       payroll?.festivalHolidays?.days?.some(
+//         (d) => new Date(d).toDateString() === today.toDateString()
+//       );
+
+//     const isInternationalHoliday =
+//       payroll?.internationalHolidays?.enabled === "Yes" &&
+//       payroll?.internationalHolidays?.days?.some(
+//         (d) => new Date(d).toDateString() === today.toDateString()
+//       );
 
    
 
-    // If none apply, skip
-    const isAutoPresent =
-       isFestivalHoliday || isInternationalHoliday;
+//     // If none apply, skip
+//     const isAutoPresent =
+//        isFestivalHoliday || isInternationalHoliday;
 
-    for (const user of users) {
-      // Check if already marked
-      const already = await attendanceService.findAttendance({
-        employeeID: user._id,
-        year,
-        month,
-        date,
-      });
+//     for (const user of users) {
+//       // Check if already marked
+//       const already = await attendanceService.findAttendance({
+//         employeeID: user._id,
+//         year,
+//         month,
+//         date,
+//       });
 
-      if (already) continue;
+//       if (already) continue;
 
-      // LEAVE CHECK (approved leaves only)
-      const leaveApproved = leaves.some((lv) => {
-        const start = new Date(lv.startDate);
-        const end = new Date(lv.endDate);
-        return today >= start && today <= end;
-      });
+//       // LEAVE CHECK (approved leaves only)
+//       const leaveApproved = leaves.some((lv) => {
+//         const start = new Date(lv.startDate);
+//         const end = new Date(lv.endDate);
+//         return today >= start && today <= end;
+//       });
 
-      // Attendance object (default absent)
-      let attendanceData = {
-        employeeID: user._id,
-        year,
-        month,
-        date,
-        day: dayName,
-        present: false,
-        attendanceIn: "-",
-        attendanceOut: "-",
-        totalHours: "-",
-        late: "-",
-        timeStatus: "-",
-      };
+//       // Attendance object (default absent)
+//       let attendanceData = {
+//         employeeID: user._id,
+//         year,
+//         month,
+//         date,
+//         day: dayName,
+//         present: false,
+//         attendanceIn: "-",
+//         attendanceOut: "-",
+//         totalHours: "-",
+//         late: "-",
+//         timeStatus: "-",
+//       };
 
-      // Mark present for:
-      // ✔ Sunday
-      // ✔ Festival
-      // ✔ International
-      // ✔ Approved leaves
-      if (isAutoPresent || leaveApproved) {
-        attendanceData.present = true;
-        attendanceData.timeStatus = "Full Time";
-      }
+//       // Mark present for:
+//       // ✔ Sunday
+//       // ✔ Festival
+//       // ✔ International
+//       // ✔ Approved leaves
+//       if (isAutoPresent || leaveApproved) {
+//         attendanceData.present = true;
+//         attendanceData.timeStatus = "Full Time";
+//       }
 
-      await attendanceService.markAttendance(attendanceData);
-    }
+//       await attendanceService.markAttendance(attendanceData);
+//     }
 
-    console.log("Auto Attendance Applied for All Employees ✔");
+//     console.log("Auto Attendance Applied for All Employees ✔");
 
-  } catch (err) {
-    console.error("Auto Attendance Error:", err);
-  }
-};
+//   } catch (err) {
+//     console.error("Auto Attendance Error:", err);
+//   }
+// };
 
 
   applyLeaveApplication = async (req, res, next) => {
