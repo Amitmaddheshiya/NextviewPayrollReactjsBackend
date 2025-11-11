@@ -24,8 +24,14 @@ dbConnection();
 const {CLIENT_URL} = process.env;
 console.log(CLIENT_URL);
 
+app.set("trust proxy", 1);
+
 app.use(cors({
-  origin: 'http://localhost:3000',  // your frontend URL
+  origin: [
+    process.env.CLIENT_URL,
+    "http://localhost:3000"
+  ],
+   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,                // allow cookies/auth headers
 }));
 

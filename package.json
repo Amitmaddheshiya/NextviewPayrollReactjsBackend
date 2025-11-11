@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "dev": "npx nodemon server.js",
-    "start": "npm server.js"
+    "start": "npm server.js",
+    "build": "echo 'No build step needed for backend'"
   },
   "keywords": [],
   "author": "Social Codia",
