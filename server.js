@@ -17,7 +17,6 @@ const cron = require("node-cron");
 const userController = require("./controllers/user-controller");
 
 
-
 const app = express();
 
 // Database Connection
@@ -25,10 +24,9 @@ dbConnection();
 const {CLIENT_URL} = process.env;
 console.log(CLIENT_URL);
 
-//Cors Optio
 app.use(cors({
-  origin: "https://nextviewpayrollreactjsfrontend.vercel.app", // frontend URL
-  credentials: true, // if using cookies
+  origin: 'http://localhost:3000',  // your frontend URL
+  credentials: true,                // allow cookies/auth headers
 }));
 
 cron.schedule(
@@ -45,7 +43,6 @@ cron.schedule(
 
 
 //Configuration
-app.use(cors(corsOption));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
